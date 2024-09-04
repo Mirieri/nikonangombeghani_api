@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete
 from . import models, schemas
 from passlib.context import CryptContext
 from typing import Optional, List
@@ -80,5 +81,52 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[models.User
 
 async def get_user_by_username(db: AsyncSession, username: str) -> Optional[models.User]:
     return await get_object_by_field(db, models.User, 'username', username)
+
+async def update_user(db: AsyncSession, user_id: int, user_update: schemas.UserUpdate) -> Optional[schemas.User]:
+    """Update an existing user."""
+    async with db.begin():
+        user = await get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_data = user_update.model_dump()
+
+        if 'password' in user_data:
+            user_data['password_hash'] = pwd_context.hash(user_data.pop('password'))
+
+        try:
+            for field, value in user_data.items():
+                setattr(user, field, value)
+
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            return schemas.User.model_validate(user)
+        except IntegrityError as ie:
+            logger.error(f"Integrity error while updating user {user_id}: {ie}")
+            raise HTTPException(status_code=400, detail="Integrity error, possibly due to duplicate entries.")
+        except Exception as e:
+            logger.error(f"Error updating user {user_id}: {e}")
+            raise HTTPException(status_code=500, detail="An error occurred while updating the user.")
+
+async def delete_user(db: AsyncSession, user_id: int) -> Optional[schemas.User]:
+    """Delete an existing user."""
+    async with db.begin():
+        user = await get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        try:
+            await db.execute(delete(models.User).where(models.User.user_id == user_id))
+            await db.commit()
+            return schemas.User.model_validate(user)
+        except IntegrityError as ie:
+            logger.error(f"Integrity error while deleting user {user_id}: {ie}")
+            await db.rollback()
+            raise HTTPException(status_code=400, detail="Integrity error, possibly due to foreign key constraints.")
+        except Exception as e:
+            logger.error(f"Error deleting user {user_id}: {e}")
+            await db.rollback()
+            raise HTTPException(status_code=500, detail="An error occurred while deleting the user.")
 
 # Other CRUD functions remain unchanged...

@@ -14,6 +14,10 @@ class UserStatus(str, enum.Enum):
     Inactive = "Inactive"
     Suspended = "Suspended"
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
 # User schemas
 class UserBase(BaseModel):
     username: str
@@ -24,7 +28,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserUpdate(UserBase):
-    status: Optional[UserStatus] = UserStatus.Active
+    password: Optional[str] = None
 
 class User(UserBase):
     user_id: int
