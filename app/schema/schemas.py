@@ -144,3 +144,13 @@ class CattleImageOut(CattleImageBase):
 
     class Config:
         from_attributes = True
+
+# Whatsapp
+class MessageCreate(BaseModel):
+    sender_id: int
+    receiver_id: int
+    message_content: str
+    sent_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

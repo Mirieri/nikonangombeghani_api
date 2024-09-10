@@ -20,3 +20,10 @@ SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=F
 
 # Base model for SQLAlchemy
 Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
