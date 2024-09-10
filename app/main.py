@@ -1,3 +1,4 @@
+from typing import List, AsyncIterator
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -10,21 +11,26 @@ from .auth import create_access_token, authenticate_user, get_db
 from .config import ACCESS_TOKEN_EXPIRE_MINUTES
 from .models import User
 from datetime import timedelta
+from contextlib import asynccontextmanager
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 
 # Create a new FastAPI app
-app = FastAPI()
-
-# Asynchronous function to create tables
-async def init_db():
+@asynccontextmanager
+async def lifespan_handler(app: FastAPI) -> AsyncIterator[None]:
+    # This will run on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# Startup event to initialize the database
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
+    # Yield control back to the application
+    yield
+
+    # This will run on shutdown
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+# Create a new FastAPI app with the corrected lifespan handler
+app = FastAPI(lifespan=lifespan_handler)
 
 @app.get("/")
 async def read_root():
@@ -65,6 +71,10 @@ async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
     return db_user
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+@app.get("/users/", response_model=List[schemas.User])
+async def read_all_users(db: AsyncSession = Depends(get_db)):
+    return await crud.get_all_users(db=db)
 
 @app.put("/users/{user_id}", response_model=schemas.User)
 async def update_user(
@@ -130,34 +140,34 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
         print(f"IntegrityError: {error_message}")
         raise HTTPException(status_code=400, detail=f"Database integrity error: {error_message}")
 
-# Farmer endpoints
-@app.post("/farmers/", response_model=schemas.FarmerOut)
-async def create_farmer(farmer: schemas.FarmerCreate, db: AsyncSession = Depends(get_db)):
-    return await crud.create_farmer(db=db, farmer=farmer)
-
-@app.get("/farmers/{farmer_id}", response_model=schemas.FarmerOut)
-async def read_farmer(farmer_id: int, db: AsyncSession = Depends(get_db)):
-    db_farmer = await crud.get_farmer(db, farmer_id=farmer_id)
-    if db_farmer is None:
-        raise HTTPException(status_code=404, detail="Farmer not found")
-    return db_farmer
-
-@app.get("/farmers/", response_model=list[schemas.FarmerOut])
-async def read_farmers(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
-    return await crud.get_farmers(db=db, skip=skip, limit=limit)
-
-# Cattle endpoints
-@app.post("/cattles/", response_model=schemas.CattleOut)
-async def create_cattle(cattle: schemas.CattleCreate, db: AsyncSession = Depends(get_db)):
-    return await crud.create_cattle(db=db, cattle=cattle)
-
-@app.get("/cattles/{cattle_id}", response_model=schemas.CattleOut)
-async def read_cattle(cattle_id: int, db: AsyncSession = Depends(get_db)):
-    db_cattle = await crud.get_cattle(db, cattle_id=cattle_id)
-    if db_cattle is None:
-        raise HTTPException(status_code=404, detail="Cattle not found")
-    return db_cattle
-
-@app.get("/cattles/", response_model=list[schemas.CattleOut])
-async def read_cattles(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
-    return await crud.get_cattles(db=db, skip=skip, limit=limit)
+# # Farmer endpoints
+# @app.post("/farmers/", response_model=schemas.FarmerOut)
+# async def create_farmer(farmer: schemas.FarmerCreate, db: AsyncSession = Depends(get_db)):
+#     return await crud.create_farmer(db=db, farmer=farmer)
+#
+# @app.get("/farmers/{farmer_id}", response_model=schemas.FarmerOut)
+# async def read_farmer(farmer_id: int, db: AsyncSession = Depends(get_db)):
+#     db_farmer = await crud.get_farmer(db, farmer_id=farmer_id)
+#     if db_farmer is None:
+#         raise HTTPException(status_code=404, detail="Farmer not found")
+#     return db_farmer
+#
+# @app.get("/farmers/", response_model=list[schemas.FarmerOut])
+# async def read_farmers(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
+#     return await crud.get_farmers(db=db, skip=skip, limit=limit)
+#
+# # Cattle endpoints
+# @app.post("/cattles/", response_model=schemas.CattleOut)
+# async def create_cattle(cattle: schemas.CattleCreate, db: AsyncSession = Depends(get_db)):
+#     return await crud.create_cattle(db=db, cattle=cattle)
+#
+# @app.get("/cattles/{cattle_id}", response_model=schemas.CattleOut)
+# async def read_cattle(cattle_id: int, db: AsyncSession = Depends(get_db)):
+#     db_cattle = await crud.get_cattle(db, cattle_id=cattle_id)
+#     if db_cattle is None:
+#         raise HTTPException(status_code=404, detail="Cattle not found")
+#     return db_cattle
+#
+# @app.get("/cattles/", response_model=list[schemas.CattleOut])
+# async def read_cattles(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
+#     return await crud.get_cattles(db=db, skip=skip, limit=limit)

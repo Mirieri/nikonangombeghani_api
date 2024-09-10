@@ -46,7 +46,10 @@ class UserCreate(BaseModel):
     phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
     address: Optional[str] = None  # Optional address field
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
     password: Optional[str] = None
 
 class User(UserBase):
@@ -58,7 +61,8 @@ class User(UserBase):
     address: Optional[str] = None
 
     class Config:
-        orm_mode = True  # Updated for Pydantic V2
+        orm_mode = True
+        from_attributes = True
 
 class UserResponse(BaseModel):
     message: str

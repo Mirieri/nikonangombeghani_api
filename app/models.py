@@ -1,7 +1,9 @@
+import enum
+
 from sqlalchemy import Column, String, Integer, Date, BigInteger, Enum as SQLEnum, ForeignKey, DECIMAL, DateTime, Text, func
 from sqlalchemy.orm import relationship
 from .database import Base
-import enum
+
 
 # Enum definitions
 class UserRole(enum.Enum):
