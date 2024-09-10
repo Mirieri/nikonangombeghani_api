@@ -145,6 +145,17 @@ class CattleImageOut(CattleImageBase):
     class Config:
         from_attributes = True
 
+class CattleImageBase(BaseModel):
+    cattle_id: int
+    image_url: str
+
+class CattleImageResponse(CattleImageBase):
+    image_id: int
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # Whatsapp
 class MessageCreate(BaseModel):
     sender_id: int

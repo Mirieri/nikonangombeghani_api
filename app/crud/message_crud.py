@@ -3,7 +3,7 @@ from sqlalchemy import func
 from app.models import Message, User
 from app.schema.schemas import MessageCreate
 from app.whatsapp.whatsapp import WhatsAppAPI
-from app.config.whatsapp_settings import AppSettings
+from app.config.appsettings import AppSettings
 
 def get_user_phone_number(db: Session, receiver_id: int) -> str:
     user = db.query(User).filter(User.user_id == receiver_id).first()

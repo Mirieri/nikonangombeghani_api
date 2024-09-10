@@ -13,6 +13,7 @@ class AppSettings(BaseSettings):
     debug: bool
     api_url: str
     api_key: str
+    file_storage_path: str
 
 # Initialize AppSettings
 settings = AppSettings()

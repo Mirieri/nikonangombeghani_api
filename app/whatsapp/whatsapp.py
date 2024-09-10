@@ -1,5 +1,5 @@
 import requests
-from app.config.whatsapp_settings import AppSettings
+from app.config.appsettings import AppSettings
 
 # Initialize AppSettings
 app_settings = AppSettings()
