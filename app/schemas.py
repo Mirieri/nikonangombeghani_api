@@ -61,7 +61,6 @@ class User(UserBase):
     address: Optional[str] = None
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
 class UserResponse(BaseModel):
@@ -83,7 +82,7 @@ class LocationOut(LocationBase):
     farmer_id: Optional[int]
 
     class Config:
-        orm_mode = True  # Updated for Pydantic V2
+        from_attributes = True
 
 # Farmer schemas
 class FarmerBase(BaseModel):
@@ -100,7 +99,7 @@ class FarmerOut(FarmerBase):
     registration_date: date
 
     class Config:
-        orm_mode = True  # Updated for Pydantic V2
+        from_attributes = True
 
 # Cattle schemas
 class CattleBase(BaseModel):
@@ -118,7 +117,7 @@ class CattleOut(CattleBase):
     cattle_id: int
 
     class Config:
-        orm_mode = True  # Updated for Pydantic V2
+        from_attributes = True
 
 # Cattle Image schemas
 class CattleImageBase(BaseModel):
@@ -133,4 +132,4 @@ class CattleImageOut(CattleImageBase):
     uploaded_at: datetime
 
     class Config:
-        orm_mode = True  # Updated for Pydantic V2
+        from_attributes = True
