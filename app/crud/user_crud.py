@@ -5,11 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import delete
-from . import models, schemas
+from app import models
+from app.schema import schemas
 from passlib.context import CryptContext
 from typing import Optional, List
 from fastapi import HTTPException
-from .models import User
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -161,4 +161,3 @@ async def get_all_users(db: AsyncSession) -> List[schemas.User]:
         logger.error(f"Error fetching all users: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while fetching users.")
 
-# Other CRUD functions remain unchanged...

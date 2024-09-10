@@ -114,7 +114,15 @@ class CattleBase(BaseModel):
     status: CattleStatusEnum
 
 class CattleCreate(CattleBase):
-    pass
+    user_id: Optional[int] = None
+
+class CattleUpdate(BaseModel):
+    name: Optional[str] = None
+    breed: Optional[str] = None
+    birth_date: Optional[date] = None
+    gender: Optional[GenderEnum] = None
+    quality_score: Optional[float] = None
+    status: Optional[CattleStatusEnum] = None
 
 class CattleOut(CattleBase):
     cattle_id: int
