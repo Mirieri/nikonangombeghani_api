@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schema import schemas
-from app.crud import cattle_crud
+from app.crud import cattle
 from app.auth.auth import get_db
 
 router = APIRouter()

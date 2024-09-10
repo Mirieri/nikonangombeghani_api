@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, UploadFile, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from app.schema.schemas import CattleImageCreate, CattleImageResponse
-from app.crud.cattle_image_crud import create_cattle_image, get_cattle_images, get_cattle_image, delete_cattle_image
+from app.crud.cattle_image import create_cattle_image, get_cattle_images, get_cattle_image, delete_cattle_image
 from app.auth.auth import get_db
 
 router = APIRouter()
