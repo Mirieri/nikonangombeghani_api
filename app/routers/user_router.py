@@ -4,12 +4,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schema import schemas
 from app.crud import user_crud
-from app.auth.auth import get_db
+from app.auth.auth import get_db, create_access_token, authenticate_user
 from app.models import User
 from passlib.context import CryptContext
 from datetime import timedelta
-from app.config.config import ACCESS_TOKEN_EXPIRE_MINUTES
-from app.auth.auth import create_access_token, authenticate_user
+from app.config.appsettings import settings
 from sqlalchemy import update
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -30,7 +29,7 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
