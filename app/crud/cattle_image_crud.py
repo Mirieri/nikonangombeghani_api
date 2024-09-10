@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import UploadFile, HTTPException
 from ..models import CattleImage
-from app.schema.schemas import CattleImageCreate, CattleImageResponse
-from app.config.image_utill import save_image_to_storage
+from app.schema.schemas import CattleImageResponse
+from app.utills.image_utill import save_image_to_storage
 
 
 def create_cattle_image(db: Session, cattle_id: int, file: UploadFile) -> CattleImageResponse:

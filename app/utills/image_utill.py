@@ -1,7 +1,7 @@
 import os
 import uuid
 from fastapi import UploadFile
-from .appsettings import settings
+from app.config.appsettings import settings
 
 
 def save_image_to_storage(file: UploadFile, filename: str) -> str:
