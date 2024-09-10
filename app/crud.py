@@ -1,5 +1,6 @@
 import logging
 
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -60,7 +61,8 @@ async def create_user(db: AsyncSession, user: schemas.UserCreate) -> schemas.Use
         raise HTTPException(status_code=400, detail=f"Invalid role: {user.role}")
 
     user_data['password_hash'] = password_hash
-    user_data.pop('password')  # Remove plaintext password
+    user_data['last_login'] = datetime.now(timezone.utc)
+    user_data.pop('password')
 
     # Create and return the user object
     created_user = await create_object(db, models.User, user_data)
@@ -83,7 +85,7 @@ async def update_user(db: AsyncSession, user_id: int, user_update: schemas.UserU
     """Update an existing user."""
     async with db.begin():
         # 1. Fetch the User
-        result = await db.execute(select(User).where(User.user_id == user_id))
+        result = await db.execute(select(models.User).where(models.User.user_id == user_id))
         user = result.scalars().first()
 
         # 2. Check User Existence
@@ -97,10 +99,14 @@ async def update_user(db: AsyncSession, user_id: int, user_update: schemas.UserU
             update_data['password_hash'] = pwd_context.hash(update_data.pop('password'))
 
         # 4. Explicitly Define Fields to Update
-        allowed_fields = ['username', 'email', 'password_hash']  # List fields that can be updated
+        allowed_fields = ['username', 'email', 'password_hash', 'address', 'last_login']
         for field in allowed_fields:
             if field in update_data:
                 setattr(user, field, update_data[field])
+
+        # Update last_login to current UTC time if it's not included in the update_data
+        if 'last_login' not in update_data:
+            user.last_login = datetime.now(timezone.utc)
 
         try:
             # 5. Commit Changes
@@ -117,6 +123,7 @@ async def update_user(db: AsyncSession, user_id: int, user_update: schemas.UserU
             logger.error(f"Error updating user {user_id}: {e}")
             await db.rollback()  # Rollback changes in case of error
             raise HTTPException(status_code=500, detail="An error occurred while updating the user.")
+
 
 async def delete_user(db: AsyncSession, user_id: int) -> Optional[schemas.User]:
     """Delete an existing user."""

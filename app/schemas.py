@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import enum
 
 
@@ -44,17 +44,20 @@ class UserCreate(BaseModel):
     email: EmailStr
     role: str
     phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
-    address: Optional[str] = None  # Optional address field
+    address: Optional[str] = None
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
     password: Optional[str] = None
+    address: Optional[str] = None
+    last_login: Optional[datetime] = None
 
 class User(UserBase):
     user_id: int
     created_at: datetime
+    last_login: Optional[datetime] = None
     status: UserStatus
     role: str
     phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
