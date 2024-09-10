@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from typing import List
 from app.models.pedigree import Pedigree
 from app.schema.schemas import PedigreeCreate, PedigreeOut
 from app.models.database import get_db
