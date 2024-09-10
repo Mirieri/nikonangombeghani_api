@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models import Message, User
 from app.schema.schemas import MessageCreate
-from app.whatsapp.whatsapp import WhatsAppAPI
+from app.utills.whatsapp.whatsapp import WhatsAppAPI
 from app.config.appsettings import AppSettings
 
 def get_user_phone_number(db: Session, receiver_id: int) -> str:
