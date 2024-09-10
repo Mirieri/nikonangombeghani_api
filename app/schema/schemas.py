@@ -1,8 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 import enum
-
 
 # Enum definitions
 class UserRole(str, enum.Enum):
@@ -59,7 +58,6 @@ class User(UserBase):
     created_at: datetime
     last_login: Optional[datetime] = None
     status: UserStatus
-    role: str
     phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
     address: Optional[str] = None
 
@@ -145,10 +143,6 @@ class CattleImageOut(CattleImageBase):
     class Config:
         from_attributes = True
 
-class CattleImageBase(BaseModel):
-    cattle_id: int
-    image_url: str
-
 class CattleImageResponse(CattleImageBase):
     image_id: int
     uploaded_at: datetime
@@ -156,12 +150,163 @@ class CattleImageResponse(CattleImageBase):
     class Config:
         from_attributes = True
 
-# Whatsapp
+# WhatsApp Message schemas
 class MessageCreate(BaseModel):
     sender_id: int
     receiver_id: int
     message_content: str
     sent_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+# Calving schemas
+class CalvingBase(BaseModel):
+    cattle_id: Optional[int] = None
+    calving_date: Optional[date] = None
+    calf_gender: Optional[GenderEnum] = None
+    calf_health_status: Optional[str] = None
+
+class CalvingCreate(CalvingBase):
+    pass
+
+class CalvingOut(CalvingBase):
+    calving_id: int
+
+    class Config:
+        from_attributes = True
+
+# Insemination schemas
+class InseminationBase(BaseModel):
+    cattle_id: int
+    insemination_date: date
+    insemination_method: Optional[str] = None
+    bull_id: Optional[int] = None
+
+class InseminationCreate(InseminationBase):
+    pass
+
+class InseminationOut(InseminationBase):
+    insemination_id: int
+
+    class Config:
+        from_attributes = True
+
+# Milk Production schemas
+class MilkProductionBase(BaseModel):
+    cattle_id: int
+    production_date: date
+    volume: float
+
+class MilkProductionCreate(MilkProductionBase):
+    pass
+
+class MilkProductionOut(MilkProductionBase):
+    production_id: int
+
+    class Config:
+        from_attributes = True
+
+# Pedigree schemas
+class PedigreeBase(BaseModel):
+    cattle_id: int
+    dam_id: Optional[int] = None
+    sire_id: Optional[int] = None
+
+class PedigreeCreate(PedigreeBase):
+    pass
+
+class PedigreeOut(PedigreeBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+# Cattle Ownership History schemas
+class CattleOwnershipHistoryBase(BaseModel):
+    cattle_id: Optional[int] = None
+    previous_owner_id: Optional[int] = None
+    new_owner_id: Optional[int] = None
+    ownership_change_date: Optional[date] = None
+
+class CattleOwnershipHistoryCreate(CattleOwnershipHistoryBase):
+    cattle_id: Optional[int] = None
+    previous_owner_id: Optional[int] = None
+    new_owner_id: Optional[int] = None
+    ownership_change_date: Optional[date] = None
+
+class CattleOwnershipHistoryOut(CattleOwnershipHistoryBase):
+    ownership_id: int
+
+    class Config:
+        from_attributes = True
+
+# Favorite schemas
+class FavoriteBase(BaseModel):
+    client_id: Optional[int] = None
+    cattle_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+
+class FavoriteCreate(FavoriteBase):
+    client_id: Optional[int] = None
+    cattle_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+
+class FavoriteOut(FavoriteBase):
+    client_id: Optional[int] = None
+    cattle_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    favorite_id: int
+
+    class Config:
+        from_attributes = True
+
+# Notification schemas
+class NotificationBase(BaseModel):
+    user_id: int
+    message: str
+    created_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
+
+class NotificationCreate(NotificationBase):
+    pass
+
+class NotificationOut(NotificationBase):
+    notification_id: int
+
+    class Config:
+        from_attributes = True
+
+# Trade schemas
+class TradeBase(BaseModel):
+    seller_id: int
+    buyer_id: int
+    cattle_id: int
+    trade_date: Optional[datetime] = None
+    price: float
+
+class TradeOut(TradeBase):
+    seller_id: int
+    buyer_id: int
+    cattle_id: int
+    trade_date: Optional[datetime] = None
+    price: float
+    trade_id: int
+
+    class Config:
+        from_attributes = True
+
+# Weight Record schemas
+class WeightRecordBase(BaseModel):
+    cattle_id: int
+    weight_date: date
+    weight: float
+
+class WeightRecordCreate(WeightRecordBase):
+    pass
+
+class WeightRecordOut(WeightRecordBase):
+    weight_id: int
 
     class Config:
         from_attributes = True
