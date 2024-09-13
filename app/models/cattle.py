@@ -1,5 +1,4 @@
 import enum
-
 from sqlalchemy import Column, BigInteger, String, Date, DECIMAL, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -35,3 +34,6 @@ class Cattle(Base):
     inseminations = relationship('Insemination', back_populates='cattle')
     trades = relationship('Trade', back_populates='cattle')
     favorites = relationship('Favorite', back_populates='cattle')
+    pedigrees = relationship("Pedigree", foreign_keys="[Pedigree.cattle_id]", back_populates="cattle")
+    offspring_dam = relationship('Pedigree', foreign_keys="[Pedigree.dam_id]", back_populates='dam')
+    offspring_sire = relationship('Pedigree', foreign_keys="[Pedigree.sire_id]", back_populates='sire')

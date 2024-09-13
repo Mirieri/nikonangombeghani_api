@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ValidationError
 from typing import Optional, Annotated
 from datetime import date, datetime
 import enum
@@ -35,15 +35,19 @@ class TokenData(BaseModel):
 class UserBase(BaseModel):
     username: str
     email: EmailStr
-    role: UserRole
+    role: UserRole  # Use enum directly
 
 class UserCreate(BaseModel):
     username: str
     password: str
     email: EmailStr
-    role: str
+    role: UserRole
     phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
     address: Optional[str] = None
+    last_login: Optional[datetime] = None
+
+    class Config:
+        use_enum_values = True
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -62,11 +66,21 @@ class User(UserBase):
     address: Optional[str] = None
 
     class Config:
+        orm_mode = True
         from_attributes = True
 
-class UserResponse(BaseModel):
-    message: str
-    user: User
+class UserResponse(UserBase):
+    user_id: int
+    created_at: datetime
+    status: UserStatus
+    phone: Optional[Annotated[str, Field(min_length=10, max_length=20)]] = None
+    address: Optional[str] = None
+    last_login: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
 
 # Location schemas
 class LocationBase(BaseModel):
