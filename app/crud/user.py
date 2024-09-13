@@ -1,15 +1,22 @@
 import logging
 
 from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import delete
 from app import models
+from app.models import User
+from app.models.database import get_db, Base
 from app.schema import schemas
 from passlib.context import CryptContext
 from typing import Optional, List
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends, status
+from typing import Type, Dict, Any
+
+from app.schema.schemas import UserResponse
+from app.utills.TransactionManager import TransactionManager
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -29,49 +36,61 @@ async def get_object_by_field(db: AsyncSession, model, field_name: str, field_va
         return None
 
 
-async def create_object(db: AsyncSession, model, obj_data: dict) -> Optional[object]:
-    """Create a new object and save it to the database."""
+async def create_object(db: AsyncSession, model: Type[Base], obj_data: Dict[str, Any]) -> Any:
     try:
-        async with db.begin():
-            db_obj = model(**obj_data)
-            db.add(db_obj)
-            await db.commit()
-            await db.refresh(db_obj)
-            return db_obj
-    except IntegrityError as ie:
-        logger.error(f"Integrity error while creating {model.__name__}: {ie}")
-        raise HTTPException(status_code=400, detail="Integrity error, possibly due to duplicate entries.")
+        db_obj = model(**obj_data)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+    except SQLAlchemyError as e:
+        logger.error("Database error occurred during object creation: %s", str(e))
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database operation failed.")
     except Exception as e:
-        logger.error(f"Error creating {model.__name__}: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while creating the object.")
+        logger.error("Unexpected error occurred during object creation: %s", str(e))
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-async def create_user(db: AsyncSession, user: schemas.UserCreate) -> schemas.User:
-    # Validate user existence logic remains the same...
+async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)) -> schemas.UserResponse:
+    async with TransactionManager(db) as transaction:
 
-    # Prepare user data
-    password_hash = pwd_context.hash(user.password)
-    user_data = user.model_dump()
+        # Check if the user already exists
+        result = await transaction.execute(select(User).filter(User.email == user.email))
+        db_user = result.scalars().first()
 
-    # Convert role to enum
-    try:
-        user_role = models.UserRole[user.role] if isinstance(user.role, str) else user.role
-        user_data['role'] = user_role.value
-    except KeyError:
-        raise HTTPException(status_code=400, detail=f"Invalid role: {user.role}")
+        if db_user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    user_data['password_hash'] = password_hash
-    user_data['last_login'] = datetime.now(timezone.utc)
-    user_data.pop('password')
+        # Hash the password
+        password_hash = pwd_context.hash(user.password)
+        # Convert role from str to UserRole enum if necessary
+        try:
+            user_role = models.UserRole[user.role] if isinstance(user.role, str) else user.role
+        except KeyError:
+            raise HTTPException(status_code=400, detail=f"Invalid role: {user.role}")
 
-    # Create and return the user object
-    created_user = await create_object(db, models.User, user_data)
+        # Create the user object in the database
+        db_user = User(
+            username=user.username,
+            email=user.email,
+            role=user_role,
+            phone=user.phone,
+            address=user.address,
+            password_hash=password_hash,
+            last_login=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+            status=models.user.UserStatus.Active
+        )
 
-    if created_user is None:
-        raise HTTPException(status_code=400, detail="User could not be created due to a database error")
+        # Add the new user to the session
+        transaction.add(db_user)
+        await transaction.commit()
+        await transaction.refresh(db_user)
 
-    # Validate using model_validate
-    return schemas.User.model_validate(created_user, from_attributes=True)
+    return UserResponse.from_orm(db_user)
+
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[models.User]:
     return await get_object_by_field(db, models.User, 'user_id', user_id)
@@ -160,4 +179,3 @@ async def get_all_users(db: AsyncSession) -> List[schemas.User]:
     except Exception as e:
         logger.error(f"Error fetching all users: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while fetching users.")
-

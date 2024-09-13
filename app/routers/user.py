@@ -2,8 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.crud import user, create_user
 from app.schema import schemas
-from app.crud import user
 from app.auth.auth import get_db, create_access_token, authenticate_user
 from app.models import User
 from passlib.context import CryptContext
@@ -22,8 +23,8 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
-    user = await authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+    user_authenticate = await authenticate_user(db, form_data.username, form_data.password)
+    if not user_authenticate:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -31,27 +32,43 @@ async def login_for_access_token(
         )
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user_authenticate.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/users/", response_model=schemas.UserResponse)
-async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
-    created_user = await user_crud.create_user(db=db, user=user)
+
+@router.post("/", response_model=schemas.UserResponse)
+async def create_user_endpoint(new_user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
+    # Create the user
+    created_user = await create_user(db=db, user=new_user)
+
+    # Check if user creation was successful
     if created_user is None:
         raise HTTPException(status_code=400, detail="User could not be created")
-    return schemas.UserResponse(message="Successfully registered new user", user=created_user)
+
+    # Convert SQLAlchemy model to Pydantic model for response
+    try:
+        # Log the user data by converting to the dictionary format
+        user_response = schemas.UserResponse.from_orm(created_user)
+        print(f"Created user data: {user_response.dict()}")  # Using Pydantic's dict method to log data
+
+        # Return the UserResponse object
+        return user_response
+    except Exception as e:
+        # Log any exception
+        print(f"Error in response: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.get("/users/{user_id}", response_model=schemas.User)
 async def read_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    db_user = await user_crud.get_user_by_id(db, user_id=user_id)
+    db_user = await user.get_user_by_id(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.get("/users/", response_model=List[schemas.User])
 async def read_all_users(db: AsyncSession = Depends(get_db)):
-    return await user_crud.get_all_users(db=db)
+    return await user.get_all_users(db=db)
 
 @router.put("/users/{user_id}", response_model=schemas.User)
 async def update_user(
@@ -97,7 +114,7 @@ async def update_user(
 @router.delete("/users/{user_id}", response_model=schemas.User)
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     try:
-        deleted_user = await user_crud.delete_user(db=db, user_id=user_id)
+        deleted_user = await user.delete_user(db=db, user_id=user_id)
         if deleted_user is None:
             raise HTTPException(status_code=404, detail="User not found")
         return deleted_user

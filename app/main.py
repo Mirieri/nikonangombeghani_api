@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 @asynccontextmanager
-async def lifespan_manager() -> AsyncIterator[None]:
+async def lifespan_manager(app: FastAPI) -> AsyncIterator[None]:
     """Handle the lifespan of the application, including database setup and teardown."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
