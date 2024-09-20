@@ -1,72 +1,50 @@
-from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.exc import IntegrityError
-from app.models.cattle import Cattle
+from sqlalchemy.exc import NoResultFound
+from app.models import Cattle
 from app.schema import schemas
+from app.utills.TransactionManager import TransactionManager
 
-async def create_cattle(db: AsyncSession, cattle_data: schemas.CattleCreate) -> Cattle:
-    # Create an instance of the Cattle model
-    db_cattle = Cattle(
-        name=cattle_data.name,
-        breed=cattle_data.breed,
-        birth_date=cattle_data.birth_date,
-        gender=cattle_data.gender,
-        quality_score=cattle_data.quality_score,
-        status=cattle_data.status,
-        user_id=cattle_data.user_id
-    )
-
-    db.add(db_cattle)
-    try:
-        await db.commit()
-        await db.refresh(db_cattle)
+async def create_cattle(db: AsyncSession, cattle_data: schemas.CattleCreate) -> schemas.CattleOut:
+    async with TransactionManager(db) as session:
+        db_cattle = Cattle(**cattle_data.model_dump())
+        session.add(db_cattle)
+        await session.commit()
+        await session.refresh(db_cattle)
         return db_cattle
-    except IntegrityError as e:
-        await db.rollback()
-        raise ValueError(f"Integrity error occurred while creating cattle: {e}")
 
-async def get_cattle(db: AsyncSession, cattle_id: int) -> Optional[Cattle]:
-    query = select(Cattle).where(Cattle.cattle_id == cattle_id)
-    result = await db.execute(query)
-    return result.scalars().first()
-
-async def get_all_cattles(db: AsyncSession, skip: int = 0, limit: int = 10) -> List[Cattle]:
-    query = select(Cattle).offset(skip).limit(limit)
-    result = await db.execute(query)
-    return result.scalars().all()
-
-async def update_cattle(db: AsyncSession, cattle_id: int, cattle_update: schemas.CattleUpdate) -> Optional[Cattle]:
-    query = select(Cattle).where(Cattle.cattle_id == cattle_id)
-    result = await db.execute(query)
-    db_cattle = result.scalars().first()
-
-    if not db_cattle:
-        return None
-
-    for key, value in cattle_update.dict(exclude_unset=True).items():
-        setattr(db_cattle, key, value)
-
-    try:
-        await db.commit()
-        await db.refresh(db_cattle)
+async def get_cattle(db: AsyncSession, cattle_id: int) -> schemas.CattleOut:
+    async with TransactionManager(db) as session:
+        result = await session.execute(select(Cattle).filter(Cattle.cattle_id == cattle_id))
+        db_cattle = result.scalars().first()
+        if db_cattle is None:
+            raise NoResultFound("Cattle not found")
         return db_cattle
-    except IntegrityError as e:
-        await db.rollback()
-        raise ValueError(f"Integrity error occurred while updating cattle: {e}")
 
-async def delete_cattle(db: AsyncSession, cattle_id: int) -> Optional[Cattle]:
-    query = select(Cattle).where(Cattle.cattle_id == cattle_id)
-    result = await db.execute(query)
-    db_cattle = result.scalars().first()
+async def get_all_cattles(db: AsyncSession, skip: int = 0, limit: int = 10) -> list[schemas.CattleOut]:
+    async with TransactionManager(db) as session:
+        result = await session.execute(select(Cattle).offset(skip).limit(limit))
+        return result.scalars().all()
 
-    if not db_cattle:
-        return None
-
-    await db.delete(db_cattle)
-    try:
-        await db.commit()
+async def update_cattle(db: AsyncSession, cattle_id: int, cattle_update: schemas.CattleUpdate) -> schemas.CattleOut:
+    async with TransactionManager(db) as session:
+        result = await session.execute(select(Cattle).filter(Cattle.cattle_id == cattle_id))
+        db_cattle = result.scalars().first()
+        if db_cattle is None:
+            raise NoResultFound("Cattle not found")
+        for key, value in cattle_update.model_dump(exclude_unset=True).items():  # Use model_dump() instead of dict()
+            setattr(db_cattle, key, value)
+        session.add(db_cattle)
+        await session.commit()
+        await session.refresh(db_cattle)
         return db_cattle
-    except IntegrityError as e:
-        await db.rollback()
-        raise ValueError(f"Integrity error occurred while deleting cattle: {e}")
+
+async def delete_cattle(db: AsyncSession, cattle_id: int) -> schemas.CattleOut:
+    async with TransactionManager(db) as session:
+        result = await session.execute(select(Cattle).filter(Cattle.cattle_id == cattle_id))
+        db_cattle = result.scalars().first()
+        if db_cattle is None:
+            raise NoResultFound("Cattle not found")
+        await session.delete(db_cattle)
+        await session.commit()
+        return db_cattle

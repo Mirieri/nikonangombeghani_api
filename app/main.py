@@ -3,7 +3,7 @@ from app.routers import (
     user, cattle, messaging, cattle_image,
     calving, cattle_ownership_history, favorite,
     insemination, milk_production, notification,
-    pedigree
+    pedigree, chatbot
 )
 from app.models.database import Base, engine
 from contextlib import asynccontextmanager
@@ -23,7 +23,7 @@ app = FastAPI(lifespan=lifespan_manager)
 # Include routers
 app.include_router(user.router, prefix="/users", tags=["users"])
 app.include_router(cattle.router, prefix="/cattle", tags=["cattle"])
-app.include_router(messaging.router, prefix="/messaging", tags=["messaging"])
+app.include_router(chatbot.router, prefix="/messaging", tags=["messaging"])
 app.include_router(cattle_image.router, prefix="/images", tags=["images"])
 app.include_router(calving.router, prefix="/calving", tags=["calving"])
 app.include_router(cattle_ownership_history.router, prefix="/cattle_ownership_histories", tags=["cattle_ownership_histories"])
